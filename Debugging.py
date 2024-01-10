@@ -1,7 +1,9 @@
+#-*- coding:utf-8 -*-
 from winappdbg import *
 from winappdbg.win32.defines import *
 
 import AntiDebugging
+#import AntiVM
 import Extract
 
 class Debugging_PE(EventHandler):
@@ -13,8 +15,13 @@ class Debugging_PE(EventHandler):
         'kernel32.dll' : [
             ('IsDebuggerPresent', 0),
             ('CheckRemoteDebuggerPresent', 2),
-            ('OutputDebugStringA', 1),
+            ('FindWindow', 2)
+            #('OutputDebugStringA', 1),
         ],
+
+        'ntdll.dll' : [
+            ('NtQueryInformationProcess', 5) # (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
+        ]
 
     }
 
@@ -40,6 +47,19 @@ class Debugging_PE(EventHandler):
         return_address = Extract.check_csp(event, bits)
 
         self.AntiDebugging_Checker.CheckRemoteDebuggerPresent(event, pbool, return_address) # Check & Bypass
+
+
+    def pre_NtQueryInformationProcess(self, event, ra, handle, processinfoclass, pvoid, ulong, pulong): # ProcessDebugPort, ProcessObjectHandle
+
+        bits = Extract.check_bit(event)
+
+        return_address = Extract.check_csp(event, bits)
+
+        self.AntiDebugging_Checker.NtQueryInformationProcess_Flags(event, processinfoclass, pvoid, return_address)
+
+
+
+
 
 def Debugging_Start(process):
 
