@@ -6,6 +6,28 @@ import Extract
 
 class AntiDebugging_Check(object):
 
+    def peb_beingdebugged(self, event, peb_beingdebugged):
+        if (peb_beingdebugged == 1): # Check
+            process = event.get_process()
+
+            peb_address = process.get_peb_address()
+
+            Extract.Printer_Check("PEB!BeingDebugged")
+
+            process.write_char(peb_address + 0x2, 0)  # Bypass
+
+            Extract.Printer_Bypass("PEB!BeingDebugged")
+
+    def peb_NtGlobalFlag(self, event, peb_ntglobalflag, ntglobalflag_address):
+        if (peb_ntglobalflag == 0x70): # Check
+            process = event.get_process()
+
+            Extract.Printer_Check("PEB!NtGlobalFlag")
+
+            process.write_char(ntglobalflag_address, 0) # Bypass
+
+            Extract.Printer_Bypass("PEB!NtGlobalFlag")
+
     def IsDebuggerPresent(self, event, return_value):
 
         if return_value == 1:

@@ -28,7 +28,26 @@ class Debugging_PE(EventHandler):
     def create_process(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
 
-        print (event.get_filename())
+        peb_address = process.get_peb_address()
+
+        bits = Extract.check_bit(event)
+
+        BeingDebugged_Value = process.read_char(peb_address + 0x2) # PEB!BeingDebugged
+
+        self.AntiDebugging_Checker.peb_beingdebugged(event, BeingDebugged_Value) # PEB!BeingDebugged Check
+
+        if bits == 32:
+            NtGlobalFlag = process.read_char(peb_address + 0x68) # PEB!NtGlobalFlag
+
+            self.AntiDebugging_Checker.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68)
+
+
+        else:
+            NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag
+
+            self.AntiDebugging_Checker.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc)
+
+
 
     def load_dll(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
