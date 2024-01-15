@@ -3,24 +3,29 @@ from winappdbg import *
 from winappdbg.win32.defines import *
 
 import AntiDebugging
+import AntiVM
 #import AntiVM
 import Extract
 
 class Debugging_PE(EventHandler):
 
     AntiDebugging_Checker = AntiDebugging.AntiDebugging_Check()
+    AntiVM_Checker = AntiVM.AntiVM_Check()
 
     apiHooks = {
 
         'kernel32.dll' : [
-            ('IsDebuggerPresent', 0),
-            ('CheckRemoteDebuggerPresent', 2),
-            ('FindWindow', 2)
+            ('IsDebuggerPresent', 0), # Anti Debugging
+            ('CheckRemoteDebuggerPresent', 2), # Anti Debugging
+            ('FindWindow', 2), # Anti Debugging
             #('OutputDebugStringA', 1),
+            ('GetSystemInfo', 1), # Anti VM
+            ('GlobalMemoryStatusEx', 1), # Anti VM
+            ('DeviceIoControl', 8) # Anti VM (HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD, LPOVERLAPPED)
         ],
 
         'ntdll.dll' : [
-            ('NtQueryInformationProcess', 5) # (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
+            ('NtQueryInformationProcess', 5) # (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG) # Anti Debugging
         ]
 
     }
@@ -36,16 +41,25 @@ class Debugging_PE(EventHandler):
 
         self.AntiDebugging_Checker.peb_beingdebugged(event, BeingDebugged_Value) # PEB!BeingDebugged Check
 
+        # Heap Flag -> Need to check HeapGrowable
         if bits == 32:
             NtGlobalFlag = process.read_char(peb_address + 0x68) # PEB!NtGlobalFlag
+            HeapFlag = process.read_dword(peb_address + 0x18) # PEB!HeapFlag
+            Heap_offset = 0x44
 
             self.AntiDebugging_Checker.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68)
+            self.AntiDebugging_Checker.peb_HeapFlag(event, HeapFlag, Heap_offset) # heap flag & heap base
 
-
+        # Heap Flag -> Need to check HeapGrowable
         else:
             NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag
+            HeapFlag = process.read_qword(peb_address + 0x30) # PEB!HeapFlag
+            Heap_offset = 0x74
 
             self.AntiDebugging_Checker.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc)
+            self.AntiDebugging_Checker.peb_HeapFlag(event, HeapFlag, Heap_offset) # heap flag & heap base
+
+
 
 
 
@@ -75,6 +89,30 @@ class Debugging_PE(EventHandler):
         return_address = Extract.check_csp(event, bits)
 
         self.AntiDebugging_Checker.NtQueryInformationProcess_Flags(event, processinfoclass, pvoid, return_address)
+
+    def pre_GetSystemInfo(self, event, ra, system_info_structure):
+
+        bits = Extract.check_bit(event)
+
+        return_address = Extract.check_csp(event, bits)
+
+        self.AntiVM_Checker.GetSystemInfo_Data(event, system_info_structure, return_address)
+
+    def pre_GlobalMemoryStatusEx(self, event, ra, memory_status_structure):
+
+        bits = Extract.check_bit(event)
+
+        return_address = Extract.check_csp(event, bits)
+
+        self.AntiVM_Checker.GlobalMemoryStatus_Data(event, memory_status_structure, return_address)
+
+    def pre_DeviceIoControl(self, event, ra, hDevice, dwIoControlCode, lpInBuffer, nInBufferSize, lpOutBuffer, nOutBufferSize, lpBytesReturned, lpOverlapped):
+
+        bits = Extract.check_bit(event)
+
+        return_address = Extract.check_csp(event, bits)
+
+        self.AntiVM_Checker.DeviceIoControl_Data(event, lpOutBuffer, return_address)
 
 
 

@@ -28,6 +28,41 @@ class AntiDebugging_Check(object):
 
             Extract.Printer_Bypass("PEB!NtGlobalFlag")
 
+    # Heap Flag -> Need to check HeapGrowable 
+    def peb_HeapFlag(self, event, peb_heapflag, offset):
+        process = event.get_process()
+
+        Major_Version = win32.GetVersionExA().dwMajorVersion
+
+        if (Major_Version < 6): # Before Vista
+            offset = offset - 0x4 # 0x40 or 0x70
+            try:
+                heap_flag_check_value = process.read_dword(peb_heapflag + offset)
+
+                if (heap_flag_check_value != 0): # Check
+                    Extract.Printer_Check("PEB!HeapFlag")
+
+                    process.write_dword(peb_heapflag + offset, 0) # Bypass
+
+                    Extract.Printer_Bypass("PEB!HeapFlag")
+
+            except WindowsError: # Exception
+                pass
+
+        else:
+            try:
+                heap_flag_check_value = process.read_dword(peb_heapflag + offset)
+
+                if (heap_flag_check_value != 0): # Check
+                    Extract.Printer_Check("PEB!HeapFlag")
+
+                    process.write_dword(peb_heapflag + offset, 0) # Bypass
+
+                    Extract.Printer_Bypass("PEB!HeapFlag")
+
+            except WindowsError:
+                pass
+
     def IsDebuggerPresent(self, event, return_value):
 
         if return_value == 1:
