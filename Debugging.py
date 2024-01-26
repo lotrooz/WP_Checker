@@ -21,11 +21,12 @@ class Debugging_PE(EventHandler):
             #('OutputDebugStringA', 1),
             ('GetSystemInfo', 1), # Anti VM
             ('GlobalMemoryStatusEx', 1), # Anti VM
-            ('DeviceIoControl', 8) # Anti VM (HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD, LPOVERLAPPED)
+            ('DeviceIoControl', 8), # Anti VM (HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD, LPOVERLAPPED)
+            ('FindFirstFileW', 2) # Anti VM (LPCWSTR, LPWIN32_FIND_DATAW)
         ],
 
         'ntdll.dll' : [
-            ('NtQueryInformationProcess', 5) # (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG) # Anti Debugging
+            ('NtQueryInformationProcess', 5) # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
         ]
 
     }
@@ -112,7 +113,11 @@ class Debugging_PE(EventHandler):
 
         return_address = Extract.check_csp(event, bits)
 
-        self.AntiVM_Checker.DeviceIoControl_Data(event, lpOutBuffer, return_address)
+        self.AntiVM_Checker.DeviceIoControl_Data(event, dwIoControlCode, lpOutBuffer, return_address)
+
+    def pre_FindFirstFileW(self, event, ra, lpfilename, lpFindFileData):
+
+        self.AntiVM_Checker.FindFirstFileW_Check_Bypass(event, lpfilename)
 
 
 

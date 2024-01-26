@@ -6,6 +6,7 @@ import Extract
 
 VirtualBox_Reg_List = ["HKLM\SYSTEM\CurrentControlSet\Enum\PCI\VEN_80EE*", "HKLM\HARDWARE\ACPI\DSDT\VBOX__", "HKLM\HARDWARE\ACPI\FADT\VBOX__", "HKLM\HARDWARE\ACPI\RSDT\VBOX__", "HKLM\SOFTWARE\Oracle\VirtualBox Guest Additions", "HKLM\SYSTEM\ControlSet001\Services\VBoxGuest", "HKLM\SYSTEM\ControlSet001\Services\VBoxMouse", "HKLM\SYSTEM\ControlSet001\Services\VBoxService", "HKLM\SYSTEM\ControlSet001\Services\VBoxSF", "HKLM\SYSTEM\ControlSet001\Services\VBoxVideo"]
 VMWare_Reg_List = ["HKLM\SYSTEM\CurrentControlSet\Enum\PCI\VEN_15AD*", "HKCU\SOFTWARE\VMware, Inc.\VMware Tools", "HKLM\SOFTWARE\VMware, Inc.\VMware Tools", "HKLM\SYSTEM\ControlSet001\Services\vmdebug", "HKLM\SYSTEM\ControlSet001\Services\vmmouse", "HKLM\SYSTEM\ControlSet001\Services\VMTools", "HKLM\SYSTEM\ControlSet001\Services\VMMEMCTL", "HKLM\SYSTEM\ControlSet001\Services\vmware", "HKLM\SYSTEM\ControlSet001\Services\vmci", "HKLM\SYSTEM\ControlSet001\Services\vmx86", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\CdRomNECVMWar_VMware_IDE_CD*", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\CdRomNECVMWar_VMware_SATA_CD*", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\DiskVMware_Virtual_IDE_Hard_Drive*", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\DiskVMware_Virtual_SATA_Hard_Drive*"]
+VirtualBox_File_List = ["C:\\WINDOWS\\system32\\vbox*.dll", "C:\\WINDOWS\\system32\\drivers\\vbox*.sys", "C:\\Program files\\Oracle\\VirtualBox Guest Additions"]
 
 class AntiVM_Check(object):
 
@@ -60,15 +61,57 @@ class AntiVM_Check(object):
 
             Extract.Printer_Bypass("RAM Size is adjusted")
 
-    def DeviceIoControl_Data(self, event, disk_geometry_structure, return_address):
+    def DeviceIoControl_Data(self, event, dwiocontrol_code, disk_geometry_structure, return_address):
         pid = event.get_pid()
 
         self.disk_geometry_pointer = disk_geometry_structure
         self.disk_geometry_return_address = return_address
 
-        event.debug.break_at(pid, self.disk_geometry_return_address, self.DeviceIoControl_Check_Bypass)
+        if (dwiocontrol_code == 0x70000): # IOCTL_DISK_GET_DRIVE_GEOMETRY
+            event.debug.break_at(pid, self.disk_geometry_return_address, self.DeviceIoControl_Check_Bypass)
 
     def DeviceIoControl_Check_Bypass(self, event):
 
         process = event.get_process()
+
+        disk_geometry_cylinders_lowpart = process.read_dword(self.disk_geometry_pointer + 0x10)
+        disk_geometry_cylinders_highpart = process.read_dword(self.disk_geometry_pointer + 0x14)
+
+        disk_geometry_cylinders_quadpart = disk_geometry_cylinders_lowpart + (disk_geometry_cylinders_highpart * 0x100000000) # union_structure
+
+        disk_geometry_trackspercylinder = process.read_dword(self.disk_geometry_pointer + 0x1C)
+        disk_geometry_sectorespertrack = process.read_dword(self.disk_geometry_pointer + 0x20)
+        disk_geometry_bytespersector = process.read_dword(self.disk_geometry_pointer + 0x24)
+
+        hdd_size = disk_geometry_cylinders_quadpart * disk_geometry_trackspercylinder * disk_geometry_sectorespertrack * disk_geometry_bytespersector / 1024 / 1024 / 1024
+
+        print (disk_geometry_cylinders_lowpart)
+        print (disk_geometry_cylinders_highpart)
+
+        print (hdd_size)
+
+        #test1 = process.read_dword(self.disk_geometry_pointer)
+
+        #test2 = process.read_dword(test1 + 0x16)
+
+        #print (hex(test1))
+
+        #print (hex(test2))
+
+    def FindFirstFileW_Check_Bypass(self, event, lpfilename):
+
+        process = event.get_process()
+
+        check_list = ["C:\\WINDOWS\\system32\\vbox", "C:\\WINDOWS\\system32\\drivers\\vbox", "C:\\Program files\\Oracle\\VirtualBox Guest Additions", "C:\\WINDOWS\\system32\\vm", "C:\\WINDOWS\\system32\\drivers\\vm"]
+
+        find_filename = process.peek_string(lpfilename, fUnicode=True)
+
+        for i in check_list:
+            if i.lower() in find_filename.lower(): # Check
+                Extract.Printer_Check("Virtual Machine File Check")
+
+                for i in range(0, len(find_filename), 2):
+                    process.poke_char(int(lpfilename) + i, ord(find_filename[i]) + 1)
+
+                print (process.peek_string(lpfilename, fUnicode=True))
 
