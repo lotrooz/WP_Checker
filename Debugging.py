@@ -27,8 +27,11 @@ class Debugging_PE(EventHandler):
 
         'ntdll.dll' : [
             ('NtQueryInformationProcess', 5) # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
-        ]
+        ],
 
+        'advapi32.dll' : [
+            ('RegOpenKeyExW', 5)  # Anti VM (HKEY, LPCWSTR, DWORD, REGSAM, PHKEY)
+        ]
     }
 
     def create_process(self, event):
@@ -59,10 +62,6 @@ class Debugging_PE(EventHandler):
 
             self.AntiDebugging_Checker.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc)
             self.AntiDebugging_Checker.peb_HeapFlag(event, HeapFlag, Heap_offset) # heap flag & heap base
-
-
-
-
 
     def load_dll(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
@@ -118,6 +117,10 @@ class Debugging_PE(EventHandler):
     def pre_FindFirstFileW(self, event, ra, lpfilename, lpFindFileData):
 
         self.AntiVM_Checker.FindFirstFileW_Check_Bypass(event, lpfilename)
+
+    def pre_RegOpenKeyExW(self, event, ra, hkey, lpsubkey, uloptions, samdesired, phkResult):
+
+        self.AntiVM_Checker.RegOpenKeyExW_Check_Bypass(event, hkey, lpsubkey)
 
 
 

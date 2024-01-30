@@ -6,9 +6,16 @@ import Extract
 
 VirtualBox_Reg_List = ["HKLM\SYSTEM\CurrentControlSet\Enum\PCI\VEN_80EE*", "HKLM\HARDWARE\ACPI\DSDT\VBOX__", "HKLM\HARDWARE\ACPI\FADT\VBOX__", "HKLM\HARDWARE\ACPI\RSDT\VBOX__", "HKLM\SOFTWARE\Oracle\VirtualBox Guest Additions", "HKLM\SYSTEM\ControlSet001\Services\VBoxGuest", "HKLM\SYSTEM\ControlSet001\Services\VBoxMouse", "HKLM\SYSTEM\ControlSet001\Services\VBoxService", "HKLM\SYSTEM\ControlSet001\Services\VBoxSF", "HKLM\SYSTEM\ControlSet001\Services\VBoxVideo"]
 VMWare_Reg_List = ["HKLM\SYSTEM\CurrentControlSet\Enum\PCI\VEN_15AD*", "HKCU\SOFTWARE\VMware, Inc.\VMware Tools", "HKLM\SOFTWARE\VMware, Inc.\VMware Tools", "HKLM\SYSTEM\ControlSet001\Services\vmdebug", "HKLM\SYSTEM\ControlSet001\Services\vmmouse", "HKLM\SYSTEM\ControlSet001\Services\VMTools", "HKLM\SYSTEM\ControlSet001\Services\VMMEMCTL", "HKLM\SYSTEM\ControlSet001\Services\vmware", "HKLM\SYSTEM\ControlSet001\Services\vmci", "HKLM\SYSTEM\ControlSet001\Services\vmx86", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\CdRomNECVMWar_VMware_IDE_CD*", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\CdRomNECVMWar_VMware_SATA_CD*", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\DiskVMware_Virtual_IDE_Hard_Drive*", "HKLM\SYSTEM\CurrentControlSet\Enum\IDE\DiskVMware_Virtual_SATA_Hard_Drive*"]
-VirtualBox_File_List = ["C:\\WINDOWS\\system32\\vbox*.dll", "C:\\WINDOWS\\system32\\drivers\\vbox*.sys", "C:\\Program files\\Oracle\\VirtualBox Guest Additions"]
+#VirtualBox_File_List = ["C:\\WINDOWS\\system32\\vbox*.dll", "C:\\WINDOWS\\system32\\drivers\\vbox*.sys", "C:\\Program files\\Oracle\\VirtualBox Guest Additions"]
 
 class AntiVM_Check(object):
+
+    HKEY_CLASSES_ROOT = System.registry._hives[0]
+    HKEY_CURRENT_CONFIG = System.registry._hives[1]
+    HKEY_CURRENT_USER = System.registry._hives[2]
+    HKEY_LOCAL_MACHINE = System.registry._hives[3]
+    HKEY_PERFORMANCE_DATA = System.registry._hives[4]
+    HKEY_USERS = System.registry._hives[5]
 
     def GetSystemInfo_Data(self, event, system_info_structure, return_address): # CPU Core Check
         pid = event.get_pid()
@@ -70,7 +77,7 @@ class AntiVM_Check(object):
         if (dwiocontrol_code == 0x70000): # IOCTL_DISK_GET_DRIVE_GEOMETRY
             event.debug.break_at(pid, self.disk_geometry_return_address, self.DeviceIoControl_Check_Bypass)
 
-    def DeviceIoControl_Check_Bypass(self, event):
+    def DeviceIoControl_Check_Bypass(self, event): # fix ...
 
         process = event.get_process()
 
@@ -98,7 +105,7 @@ class AntiVM_Check(object):
 
         #print (hex(test2))
 
-    def FindFirstFileW_Check_Bypass(self, event, lpfilename):
+    def FindFirstFileW_Check_Bypass(self, event, lpfilename): # File Check API
 
         process = event.get_process()
 
@@ -110,8 +117,35 @@ class AntiVM_Check(object):
             if i.lower() in find_filename.lower(): # Check
                 Extract.Printer_Check("Virtual Machine File Check")
 
-                for i in range(0, len(find_filename), 2):
-                    process.poke_char(int(lpfilename) + i, ord(find_filename[i]) + 1)
+                process.poke_char(int(lpfilename), 0x30) # Change First Byte to Zero
 
-                print (process.peek_string(lpfilename, fUnicode=True))
+                Extract.Printer_Bypass("Virtual Machine File Check") # Bypass
 
+                #print (process.peek_string(lpfilename, fUnicode=True))
+
+    def RegOpenKeyExW_Check_Bypass(self, event, hkey, lpsubkey):
+
+        process = event.get_process()
+
+        reg_string = process.peek_string(lpsubkey, fUnicode=True)
+
+        # VirtualBox Target
+        # 1. HKLM\SYSTEM\ControlSet001\Services\VBox*
+        # 2. HKLM\HARDWARE\ACPI\???T\VBOX__
+        # 3. HKLM\SOFTWARE\Oracle\VirtualBox Guest Additions
+
+        # VMware Target
+        # 1. SYSTEM\ControlSet001\Services\vm*
+        # 2. HK?U\SOFTWARE\VMware, Inc.\VMware Tools
+
+        check_list = ["SYSTEM\\ControlSet001\\Services\\VBox", "SOFTWARE\\Oracle\\VirtualBox Guest Additions", "VBOX__", "SYSTEM\\ControlSet001\\Services\\vm", "SOFTWARE\\VMware"]
+
+        for i in check_list:
+            if i.lower() in reg_string.lower(): # Check
+                Extract.Printer_Check("Virtual Machine Reg Check")
+
+                process.poke_char(lpsubkey, 0x30) # Change First Byte to Zero
+
+                Extract.Printer_Bypass("Virtual Machine Reg Check") # Bypass
+
+                #print (process.peek_string(lpsubkey, fUnicode=True))
