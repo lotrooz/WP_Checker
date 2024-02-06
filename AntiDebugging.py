@@ -216,6 +216,25 @@ class AntiDebugging_Check(object):
             else:
                 Extract.Printer_NotCheck("NtQueryInformationProcess Flags")
 
+    def NtSetInformationThread_Check_and_Bypass(self, event, threadinfo_class):
+
+        if threadinfo_class == 0x11:
+
+            Extract.Printer_Check("NtSetInformationThread")
+
+            process = event.get_process()
+            thread = event.get_thread()
+            registers = thread.get_context()
+            bits = Extract.check_bit(event)
+
+            if bits == 32:
+                check_value = registers['Esp'] + 0x4 # Bypass
+                process.write_int(check_value, 0)
+
+            else:
+                thread.set_register('Rdx', 0) # Bypass
+
+            Extract.Printer_Bypass("NtSetInformationThread")
 
 
 

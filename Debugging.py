@@ -26,11 +26,16 @@ class Debugging_PE(EventHandler):
         ],
 
         'ntdll.dll' : [
-            ('NtQueryInformationProcess', 5) # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
+            ('NtQueryInformationProcess', 5), # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
+            ('NtSetInformationThread', 4) # Anti Debugging (HANDLE, THREADINFOCLASS, PVOID, ULONG)
         ],
 
         'advapi32.dll' : [
             ('RegOpenKeyExW', 5)  # Anti VM (HKEY, LPCWSTR, DWORD, REGSAM, PHKEY)
+        ],
+
+        'setupapi.dll' : [
+            ('SetupDiGetDeviceRegistryPropertyW', 7) # Anti VM (HDEVINFO, PSP_DEVINFO_DATA, DWORD, PDWORD, PBYTE, DWORD, PDWORD)
         ]
     }
 
@@ -122,7 +127,13 @@ class Debugging_PE(EventHandler):
 
         self.AntiVM_Checker.RegOpenKeyExW_Check_Bypass(event, hkey, lpsubkey)
 
+    def pre_SetupDiGetDeviceRegistryPropertyW(self, event, ra, de_info_set, de_info_data, pro, pro_reg, pro_buf, pro_size, requ_size):
 
+        self.AntiVM_Checker.SetupDiGetDeviceRegistryPropertyW_Check_Bypass(event, pro_buf)
+
+    def pre_NtSetInformationThread(self, event, ra, thradhandle, threadinformationclass, threadinformation, threadinformationlen):
+
+        self.AntiDebugging_Checker.NtSetInformationThread_Check_and_Bypass(event, threadinformationclass)
 
 
 
