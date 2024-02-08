@@ -149,3 +149,28 @@ class AntiVM_Check(object):
                 Extract.Printer_Bypass("Virtual Machine Reg Check") # Bypass
 
                 #print (process.peek_string(lpsubkey, fUnicode=True))
+
+    def SetupDiGetDeviceRegistryPropertyW_Data(self, event, property_buffer, return_address):
+
+        pid = event.get_pid()
+
+        self.setupdi_property_buffer = property_buffer
+        self.setupdi_return_address = return_address
+
+        event.debug.break_at(pid, self.setupdi_return_address, self.SetupDiGetDeviceRegistryPropertyW_Check_Bypass)
+
+    def SetupDiGetDeviceRegistryPropertyW_Check_Bypass(self, event, property_buffer):
+
+        process = event.get_process()
+
+        device_string = process.peek_string(self.setupdi_property_buffer, fUnicode=True)
+
+        check_list = ["vbox", "vmware", "Samsung"] # Samsung is temp
+
+        for i in check_list:
+            if i.lower() in device_string.lower(): # Check
+                Extract.Printer_Check("Virtual Machine HDD Device Check")
+
+                process.poke_char(property_buffer, 0x30) # Change First byte to Zero
+
+                Extract.Printer_Bypass("Virtual Machine HDD Device Check") # Bypass
