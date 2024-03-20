@@ -27,7 +27,8 @@ class Debugging_PE(EventHandler):
 
         'ntdll.dll' : [
             ('NtQueryInformationProcess', 5), # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
-            ('NtSetInformationThread', 4) # Anti Debugging (HANDLE, THREADINFOCLASS, PVOID, ULONG)
+            ('NtSetInformationThread', 4), # Anti Debugging (HANDLE, THREADINFOCLASS, PVOID, ULONG)
+            ('NtQuerySystemInformation', 4) # Anti Debugging (SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG)
         ],
 
         'advapi32.dll' : [
@@ -39,8 +40,36 @@ class Debugging_PE(EventHandler):
         ]
     }
 
+    # test
+    def ms_vc_exception(self, event):
+        code = event.get_exception_code()
+        name = event.get_exception_name()
+
+        print (code)
+        print (name)
+
+    def exception(self, event):
+        thread = event.get_thread()
+
+        print ("AETAEWTEAWTEAWTAEWTAEWTW")
+
+        exception_name = event.get_exception_name()
+        exception_description = event.get_exception_description()
+
+        exception_code = event.get_exception_code()
+        exception_address = event.get_exception_address()
+
+        print (exception_name)
+
+        if exception_name == "EXCEPTION_INVALID_HANDLE":
+            Extract.Printer_Check("INVALID_HANDLE Exception Check, NtClose or CloseHandle Use") # NtClose or CloseHandle
+
     def create_process(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
+
+        phandle = event.get_handle()
+
+        #print (phandle)
 
         peb_address = process.get_peb_address()
 
@@ -135,7 +164,13 @@ class Debugging_PE(EventHandler):
 
         self.AntiDebugging_Checker.NtSetInformationThread_Check_and_Bypass(event, threadinformationclass)
 
+    def pre_NtQuerySystemInformation(self, event, ra, systeminformatinoclass, systeminformation, syusteminformationlength, returnlength):
 
+        bits = Extract.check_bit(event)
+
+        return_address = Extract.check_csp(event, bits)
+
+        self.AntiDebugging_Checker.NtQuerySystemInformation_Data(event, systeminformatinoclass, systeminformation, return_address)
 
 def Debugging_Start(process):
 
