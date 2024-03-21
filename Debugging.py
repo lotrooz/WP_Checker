@@ -28,7 +28,8 @@ class Debugging_PE(EventHandler):
         'ntdll.dll' : [
             ('NtQueryInformationProcess', 5), # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
             ('NtSetInformationThread', 4), # Anti Debugging (HANDLE, THREADINFOCLASS, PVOID, ULONG)
-            ('NtQuerySystemInformation', 4) # Anti Debugging (SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG)
+            ('NtQuerySystemInformation', 4), # Anti Debugging (SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG)
+            ('NtClose', 1) # Anti Debugging (HANDLE)
         ],
 
         'advapi32.dll' : [
@@ -41,6 +42,7 @@ class Debugging_PE(EventHandler):
     }
 
     # test
+    '''
     def ms_vc_exception(self, event):
         code = event.get_exception_code()
         name = event.get_exception_name()
@@ -63,11 +65,12 @@ class Debugging_PE(EventHandler):
 
         if exception_name == "EXCEPTION_INVALID_HANDLE":
             Extract.Printer_Check("INVALID_HANDLE Exception Check, NtClose or CloseHandle Use") # NtClose or CloseHandle
+    '''
 
     def create_process(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
 
-        phandle = event.get_handle()
+        #phandle = event.get_handle()
 
         #print (phandle)
 
@@ -171,6 +174,10 @@ class Debugging_PE(EventHandler):
         return_address = Extract.check_csp(event, bits)
 
         self.AntiDebugging_Checker.NtQuerySystemInformation_Data(event, systeminformatinoclass, systeminformation, return_address)
+
+    def pre_NtClose(self, event, ra, handle):
+
+        self.AntiDebugging_Checker.NtClose_Check_and_Bypass(event, handle)
 
 def Debugging_Start(process):
 
