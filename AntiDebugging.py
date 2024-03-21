@@ -3,6 +3,7 @@ from winappdbg import *
 
 import Debugging
 import Extract
+import traceback
 
 class AntiDebugging_Check(object):
 
@@ -236,6 +237,69 @@ class AntiDebugging_Check(object):
 
             Extract.Printer_Bypass("NtSetInformationThread")
 
+    def NtQuerySystemInformation_Data(self, event, systeminformatinoclass, systeminformation, return_address):
+        pid = event.get_pid()
+
+        self.NtQueryinfo_class = systeminformatinoclass
+        self.NtQueryinfo = systeminformation
+        self.NtQuery_return_address = return_address
+
+        if (self.NtQueryinfo_class == 0x23):
+            event.debug.break_at(pid, self.NtQuery_return_address, self.NtQuerySystemInformation_Check_and_Bypass)
+
+    def NtQuerySystemInformation_Check_and_Bypass(self, event):
+
+        process = event.get_process()
+        check_queryinfo = self.NtQueryinfo
+
+        DebuggerEnabled = process.read_char(check_queryinfo)    # al , Debugging -> 1
+        DebuggerNotPresent = process.read_char(check_queryinfo + 0x1)   #ah , Debugging -> 0
+
+        if (DebuggerEnabled or not DebuggerNotPresent):
+            Extract.Printer_Check("NtQuerySystemInformation")
+
+            process.write_char(check_queryinfo, 0) # DebuggerEnabled -> 0
+            process.write_char(check_queryinfo, 1) # DebuggerNotPresent -> 1
+
+            Extract.Printer_Bypass("NtQuerySystemInformation")
+
+    def NtClose_Check_and_Bypass(self, event, handle):
+
+        try:
+            status = win32.GetHandleInformation(handle)
+
+        except Exception as e:
+            if isinstance(e, WindowsError):
+                if e.winerror == 6:         # invalid handle
+                    print ("Windows Error Occured : ", e.strerror)
+
+                    process = event.get_process()
+                    thread = event.get_thread()
+                    registers = thread.get_context()
+
+                    bits = Extract.check_bit(event)
+
+                    self.handle = 0
+                    '''
+                    if bits == 32:
+                        check_value = registers['Esp'] + 0x4  # Bypass
+                        process.write_dword(check_value, 0)
+                        
+                        print (process.read_dword(check_value))
+
+                    else:
+                        thread.set_register('Rdx', 0)  # Bypass
+                        print (process.read_dword(registers['Rdx']))
+                    '''
 
 
+
+
+
+
+
+        #print (status)
+
+        #if not (status):
+        #    print ("abbbbbbbbbbbbewrwe")
 
