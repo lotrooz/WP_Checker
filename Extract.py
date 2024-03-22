@@ -1,5 +1,8 @@
 from winappdbg import *
+import Anti_Debugging
 
+def anti_create_event_handler(param1):
+    return Anti_Debugging.Anti_Debugging_Start(param1)
 def get_all(event): # process, pid, tid, module, thread, registers
     process = event.get_process()
     pid = event.get_pid()

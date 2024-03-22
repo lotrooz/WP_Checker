@@ -2,14 +2,13 @@
 from winappdbg import *
 from winappdbg.win32.defines import *
 
-import AntiDebugging
 import AntiVM
 #import AntiVM
 import Extract
 
 class Debugging_PE(EventHandler):
 
-    AntiDebugging_Checker = AntiDebugging.AntiDebugging_Check()
+    #AntiDebugging_Checker = AntiDebugging.AntiDebugging_Check()
     AntiVM_Checker = AntiVM.AntiVM_Check()
 
     apiHooks = {
@@ -185,3 +184,32 @@ def Debugging_Start(process):
         debug.execv(process)
 
         debug.loop()
+
+
+class MyEventHandler( EventHandler ):
+
+
+    # Create process events go here.
+    def create_process( self, event ):
+
+        # Start tracing the main thread.
+        event.debug.start_tracing( event.get_tid() )
+
+
+    # Create thread events go here.
+    def create_thread( self, event ):
+
+        # Start tracing the new thread.
+        event.debug.start_tracing( event.get_tid() )
+
+
+    # Single step events go here.
+    def single_step( self, event ):
+
+        # Show the user where we're running.
+        thread = event.get_thread()
+        pc     = thread.get_pc()
+        #code   = thread.disassemble( pc, 0x10 ) [0]
+        bits   = event.get_process().get_bits()
+
+        #print "%s: %s" % ( HexDump.address(code[0], bits), code[2].lower())
