@@ -51,10 +51,10 @@ def Printer_Check(Name):
     print ("[+] " + Name + " Detected !!")
     print ("[+] ----------------------------")
 
-def Printer_NotCheck(Name):
-    print("\n[+] Not Detection !!")
+def Printer_Check_Logic(Name):
+    print("\n[+] Check_Logic !!")
     print("[+] ----------------------------")
-    print("[+] " + Name + " Not Detected !!")
+    print("[+] " + Name + " Check_Logic !!")
     print("[+] ----------------------------")
 
 def Printer_Bypass(Name):

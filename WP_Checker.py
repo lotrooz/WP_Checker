@@ -3,7 +3,6 @@ import os
 import sys
 from winappdbg import *
 
-import Anti_Debugging
 from Anti_Debugging import *
 import Extract
 
@@ -24,8 +23,6 @@ def main():
     parser.add_argument('-b', '--bypass', action='store_true', help = 'Bypass Mode', dest = 'Bypass')
 
     args = parser.parse_args()
-
-    print (args.Bypass)
 
     anti_event_handler = lambda: Extract.anti_create_event_handler(args.Bypass) # Bypass Mode Check
 

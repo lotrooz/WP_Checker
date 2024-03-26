@@ -1,6 +1,7 @@
 from winappdbg import *
 from winappdbg.win32.defines import *
 
+import time
 import Extract
 import Anti_Debugging_Check
 class Anti_Debugging_Start(EventHandler):
@@ -12,7 +13,10 @@ class Anti_Debugging_Start(EventHandler):
         ],
 
         'ntdll.dll': [
+            ('NtQueryInformationProcess', 5),  # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
             ('NtQuerySystemInformation', 4),  # Anti Debugging (SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG)
+            ('NtSetInformationThread', 4),  # Anti Debugging (HANDLE, THREADINFOCLASS, PVOID, ULONG)
+            ('NtClose', 1)  # Anti Debugging (HANDLE)
         ]
     }
 
@@ -27,42 +31,88 @@ class Anti_Debugging_Start(EventHandler):
 
         peb_address = process.get_peb_address()
 
+        peb = process.get_peb()
+
         bits = Extract.check_bit(event)
 
-        # [+] # PEB!BeingDebugged
+        # [+] PEB!BeingDebugged
         BeingDebugged_Value = process.read_char(peb_address + 0x2)
 
         self.Anti.peb_beingdebugged(event, BeingDebugged_Value, self.bypass)
-        # [+] # # PEB!BeingDebugged Finish
+        # [+] PEB!BeingDebugged Finish
+
+        Major_Version = win32.GetVersionExA().dwMajorVersion # Windows Version
 
         if bits == 32:
+            # [+] PEB!NtGlobalFlag_32bit
             NtGlobalFlag = process.read_char(peb_address + 0x68) # PEB!NtGlobalFlag, Fix
 
-            HeapFlag = process.read_dword(peb_address + 0x18)  # PEB!HeapFlag
-            Heap_offset = 0x44
+            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68, self.bypass)
+            # [+] PEB!NtGlobalFlag_32bit Finish
 
-            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68)
-            self.Anti.peb_HeapFlag(event, HeapFlag, Heap_offset)  # heap flag & heap base
+            process_heap = process.read_dword(peb_address + 0x18)  # PEB!HeapFlag
+
+            if (Major_Version < 6):
+                heap_flag_offset = 0xC
+                heap_force_offset = 0x10
+
+            else:
+                heap_flag_offset = 0x40
+                heap_force_offset = 0x44
+
+            heap_flag = process.read_dword(process_heap + heap_flag_offset)
+            heap_force = process.read_dword(process_heap + heap_force_offset)
+
+            self.Anti.peb_HeapFlag(event, heap_flag, heap_force)  # heap flag & heap base
 
         else:
+            # [+] PEB!NtGlobalFlag_64bit
             NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag, Fix
 
-            HeapFlag = process.read_qword(peb_address + 0x30)  # PEB!HeapFlag , Fix
-            Heap_offset = 0x74
+            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc, self.bypass)
+            # [+] PEB!NtGlobalFlag_64bit Finish
 
-            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc)
-            self.Anti.peb_HeapFlag(event, HeapFlag, Heap_offset)  # heap flag & heap base
+            #time.sleep(10)
+
+            #process_heap = process.read_qword(peb_address + 0x30)  # PEB!HeapFlag , Fix
+
+            if (Major_Version < 6):
+                heap_flag_offset = 0x14
+                heap_force_offset = 0x18
+
+            else:
+                heap_flag_offset = 0x70
+                heap_force_offset = 0x74
 
 
-        print (self.bypass)
+            #print (heap_flag_offset)
+            #print (hex(peb_address))
+            #print (hex(peb_address+0x30))
+            #print (hex(process_heap))
 
 
-        print (bits)
+
+            #heap_flag = process.read_dword(process_heap + heap_flag_offset)
+            #heap_force = process.read_dword(process_heap + heap_force_offset)
+
+            #self.Anti.peb_HeapFlag(event, heap_flag, heap_force)  # heap flag & heap base
+
 
 
     def load_dll(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
 
+        if module.match_name("ntdll.dll"):
+            # Get the process ID.
+            peb_address = process.get_peb_address()
+
+            peb = process.get_peb()
+
+
+
+
+
+    # [+] IsDebuggerPresent
     def post_IsDebuggerPresent(self, event, retval):  # IsDebuggerPresent
 
         IsDebuggerPresent_Check = self.Anti.IsDebuggerPresent(event, retval)  # Check
@@ -70,6 +120,7 @@ class Anti_Debugging_Start(EventHandler):
         if (IsDebuggerPresent_Check and self.bypass):  # Bypass
             self.Anti.IsDebuggerPresent_Bypass(event)
 
+    # [+] CheckRemoteDebuggerPresent
     def pre_CheckRemoteDebuggerPresent(self, event, ra, handle, pbool):
 
         bits = Extract.check_bit(event)
@@ -78,12 +129,32 @@ class Anti_Debugging_Start(EventHandler):
 
         self.Anti.CheckRemoteDebuggerPresent(event, pbool, return_address, self.bypass) # Check & Bypass
 
-    def pre_NtQuerySystemInformation(self, event, ra, systeminformatinoclass, systeminformation, syusteminformationlength, returnlength):
+    # [+] NtQueryInformationProcess (Debug Port, Object Handle, Debug Flags)
+    def pre_NtQueryInformationProcess(self, event, ra, handle, systeminformatinoclass, systeminformation, info_len,re_len):
         bits = Extract.check_bit(event)
 
         return_address = Extract.check_csp(event, bits)
 
-        self.Anti.NtQuerySystemInformation_Data(event, systeminformatinoclass, systeminformation, return_address)
+        self.Anti.NtQueryInformationProcess_Flags(event, systeminformatinoclass, systeminformation, return_address, self.bypass)
+
+    # [+] NtSetInformationThread
+    def pre_NtSetInformationThread(self, event, ra, thradhandle, threadinformationclass, threadinformation, threadinformationlen):
+
+        self.Anti.NtSetInformationThread_Check(event, threadinformationclass, self.bypass)
+
+    # [+] NtQuerySystemInformation
+    def pre_NtQuerySystemInformation(self, event, ra, systeminformatinoclass, systeminformation, syusteminformationlength, returnlength):
+
+        bits = Extract.check_bit(event)
+
+        return_address = Extract.check_csp(event, bits)
+
+        self.Anti.NtQuerySystemInformation_Flags(event, systeminformatinoclass, systeminformation, return_address, self.bypass)
+
+    # [+] NtClose
+    def pre_NtClose(self, event, ra, handle):
+
+        self.Anti.NtClose_Check(event, handle, self.bypass)
 
 
 
