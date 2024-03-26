@@ -34,29 +34,5 @@ def main():
 
 
 
-
-    #parser.add_argument("filename", help="File Name Come")
-
-
-
-    options = parser.parse_args()
-
-    debug_list = []
-
-    #target = current_dir + "\\" + target_pe
-
-    #debug_list.append(target)
-
-
-    #with Debug( Debugging.MyEventHandler(), bKillOnExit = True ) as debug:
-
-        # Start a new process for debugging.
-    #    debug.execv( debug_list )
-
-        # Wait for the debugee to finish.
-    #    debug.loop()
-
-
-
 if __name__ == '__main__':
     main()
