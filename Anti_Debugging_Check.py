@@ -255,20 +255,60 @@ class AntiDebugging_Check(object):
 
         except Exception as e:
             if isinstance(e, WindowsError):
-                if e.winerror == 6:         # invalid handle
+                if e.winerror == 6:         # invalid handle Check
 
-                    Extract.Printer_Check("NtClose")
+                    if bits == 32:
+                        check_value = registers['Esp'] + 0x4
+                        if (check_value == handle and check_value > 0xFFFF): # ???
+                            Extract.Printer_Check("NtClose")
 
-                    if bypass:
-                        if bits == 32:
-                            check_value = registers['Esp'] + 0x4  # Bypass
-                            if check_value == handle:
+                            if bypass: # bypass
                                 process.write_dword(check_value, 0)
+                                Extract.Printer_Bypass("NtClose")
 
-                        else:
-                            if thread.get_register('Rcx') == handle:
-                                thread.set_register('Rcx', 0)  # Bypass
+                    else:
+                        check_value = registers['Rcx']
+                        if (check_value == handle and check_value > 0xFFFF):
+                            Extract.Printer_Check("NtClose")
 
-                        Extract.Printer_Bypass("NtClose")
+                            if bypass: # bypass
+                                thread.set_register('Rcx', 0)
+                                Extract.Printer_Bypass("NtClose")
 
+    def NtOpenProcess_Flags(self, event, return_address, bypass):
 
+        pid = event.get_pid()
+
+        self.NtOpen_return_address = return_address
+        self.NtOpen_bypass = bypass
+
+        event.debug.break_at(pid, self.NtOpen_return_address, self.NtOpenProcess_Check)
+
+    def NtOpenProcess_Check(self, event):
+
+        bits = Extract.check_bit(event)
+        pid = event.get_pid()
+        thread = event.get_thread()
+        registers = thread.get_context()
+
+        if bits == 32:
+            return_value = registers['Eax']
+
+            if return_value == 0: # STATUS_SUCCESS
+                Extract.Printer_Check("NtOpenProcess")
+
+                if self.NtOpen_bypass:
+                    thread.set_register('Eax', 0xC0000022) # STATUS_ACCESS_DENIED
+                    Extract.Printer_Bypass("NtOpenProcess")
+
+        else:
+            return_value = registers['Rax']
+
+            if return_value == 0: # STATUS_SUCCESS
+                Extract.Printer_Check("NtOpenProcess")
+
+                if self.NtOpen_bypass:
+                    thread.set_register('Rax', 0xC0000022)  # STATUS_ACCESS_DENIED
+                    Extract.Printer_Bypass("NtOpenProcess")
+
+        event.debug.dont_break_at(pid, self.NtOpen_return_address)

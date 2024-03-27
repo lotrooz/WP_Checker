@@ -1,5 +1,6 @@
 from winappdbg import *
 from winappdbg.win32.defines import *
+#from winappdbg.win32.ntdll import *
 
 import time
 import Extract
@@ -16,7 +17,8 @@ class Anti_Debugging_Start(EventHandler):
             ('NtQueryInformationProcess', 5),  # Anti Debugging (HANDLE, PROCESSINFOCLASS, PVOID, ULONG, PULONG)
             ('NtQuerySystemInformation', 4),  # Anti Debugging (SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG)
             ('NtSetInformationThread', 4),  # Anti Debugging (HANDLE, THREADINFOCLASS, PVOID, ULONG)
-            ('NtClose', 1)  # Anti Debugging (HANDLE)
+            ('NtClose', 1),  # Anti Debugging (HANDLE)
+            ('NtOpenProcess', 4) # Anti Debugging (PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PCLIENT_ID)
         ]
     }
 
@@ -34,6 +36,8 @@ class Anti_Debugging_Start(EventHandler):
         peb = process.get_peb()
 
         bits = Extract.check_bit(event)
+
+        self.csr_pid = win32.CsrGetProcessId() # NtOpenProcess
 
         # [+] PEB!BeingDebugged
         BeingDebugged_Value = process.read_char(peb_address + 0x2)
@@ -155,6 +159,18 @@ class Anti_Debugging_Start(EventHandler):
     def pre_NtClose(self, event, ra, handle):
 
         self.Anti.NtClose_Check(event, handle, self.bypass)
+
+    # [+] NtOpenProcess
+    def pre_NtOpenProcess(self, event, ra, phandle, access, attributes, pclinet_id):
+
+        process = event.get_process()
+
+        bits = Extract.check_bit(event)
+
+        return_address = Extract.check_csp(event, bits)
+
+        if process.read_dword(pclinet_id) == self.csr_pid:  # csrss.exe Process Open Check
+            self.Anti.NtOpenProcess_Flags(event, return_address, self.bypass)
 
 
 
