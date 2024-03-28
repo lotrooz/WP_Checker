@@ -18,7 +18,8 @@ class Anti_Debugging_Start(EventHandler):
             ('NtQuerySystemInformation', 4),  # Anti Debugging (SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG)
             ('NtSetInformationThread', 4),  # Anti Debugging (HANDLE, THREADINFOCLASS, PVOID, ULONG)
             ('NtClose', 1),  # Anti Debugging (HANDLE)
-            ('NtOpenProcess', 4) # Anti Debugging (PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PCLIENT_ID)
+            ('NtOpenProcess', 4), # Anti Debugging (PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PCLIENT_ID)
+            ('LdrLoadDll', 4) # Anti Debugging (PWCHAR, ULONG, PUNICODE_STRING, PHANDLE)
         ]
     }
 
@@ -38,6 +39,7 @@ class Anti_Debugging_Start(EventHandler):
         bits = Extract.check_bit(event)
 
         self.csr_pid = win32.CsrGetProcessId() # NtOpenProcess
+        self.process_name = process.get_filename() # LdrLoadDll
 
         # [+] PEB!BeingDebugged
         BeingDebugged_Value = process.read_char(peb_address + 0x2)
@@ -171,6 +173,16 @@ class Anti_Debugging_Start(EventHandler):
 
         if process.read_dword(pclinet_id) == self.csr_pid:  # csrss.exe Process Open Check
             self.Anti.NtOpenProcess_Flags(event, return_address, self.bypass)
+
+    # [+] LdrLoadDll
+    def pre_LdrLoadDll(self, event, ra, path_file, flags, module_file, module_handle):
+
+        process = event.get_process()
+        # path_file int ... ??
+        print (hex(module_file))
+        print (process.read_string(module_file, 0x20)) # ???
+
+        self.Anti.LdrLoadDll_Check(event, self.process_name, path_file, self.bypass)
 
 
 

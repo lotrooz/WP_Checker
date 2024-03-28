@@ -312,3 +312,17 @@ class AntiDebugging_Check(object):
                     Extract.Printer_Bypass("NtOpenProcess")
 
         event.debug.dont_break_at(pid, self.NtOpen_return_address)
+
+    def LdrLoadDll_Check(self, event, process_name, path_file, bypass):
+
+        bits = Extract.check_bit(event)
+
+        if process_name == path_file:
+            try:
+                win32.CreateProcessA(path_file, win32.GENERIC_READ, 0, 0, win32.OPEN_EXISTING, 0, 0)
+
+            except Exception as e:
+                if isinstance(e, WindowsError):
+                    if e.winerror == 6: # Invalid Handle
+                        Extract.Printer_Check("LdrLoadDll")
+
