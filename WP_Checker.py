@@ -4,6 +4,7 @@ import sys
 from winappdbg import *
 
 from Anti_Debugging import *
+from Anti_VM import *
 import Extract
 
 
@@ -26,8 +27,16 @@ def main():
 
     anti_event_handler = lambda: Extract.anti_create_event_handler(args.Bypass) # Bypass Mode Check
 
+    anti_vm_event_handler = lambda: Extract.anti_vm_create_event_handler(args.Bypass)  # Bypass Mode Check
+
     if args.Anti_Debugging:
         with Debug(anti_event_handler(), bKillOnExit=True) as debug:
+            debug.execv(args.filename)
+
+            debug.loop()
+
+    elif args.Anti_VM:
+        with Debug(anti_vm_event_handler(), bKillOnExit=True) as debug:
             debug.execv(args.filename)
 
             debug.loop()
