@@ -56,6 +56,7 @@ class Anti_Debugging_Start(EventHandler):
             self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68, self.bypass)
             # [+] PEB!NtGlobalFlag_32bit Finish
 
+            ''' Fix it
             process_heap = process.read_dword(peb_address + 0x18)  # PEB!HeapFlag
 
             if (Major_Version < 6):
@@ -70,6 +71,7 @@ class Anti_Debugging_Start(EventHandler):
             heap_force = process.read_dword(process_heap + heap_force_offset)
 
             self.Anti.peb_HeapFlag(event, heap_flag, heap_force)  # heap flag & heap base
+            '''
 
         else:
             # [+] PEB!NtGlobalFlag_64bit
@@ -80,6 +82,7 @@ class Anti_Debugging_Start(EventHandler):
 
             #time.sleep(10)
 
+            ''' Fix it
             #process_heap = process.read_qword(peb_address + 0x30)  # PEB!HeapFlag , Fix
 
             if (Major_Version < 6):
@@ -102,7 +105,7 @@ class Anti_Debugging_Start(EventHandler):
             #heap_force = process.read_dword(process_heap + heap_force_offset)
 
             #self.Anti.peb_HeapFlag(event, heap_flag, heap_force)  # heap flag & heap base
-
+            '''
 
 
     def load_dll(self, event):
@@ -179,8 +182,8 @@ class Anti_Debugging_Start(EventHandler):
 
         process = event.get_process()
         # path_file int ... ??
-        print (hex(module_file))
-        print (process.read_string(module_file, 0x20)) # ???
+        #print (hex(module_file))
+        #print (process.read_string(module_file, 0x20)) # ???
 
         self.Anti.LdrLoadDll_Check(event, self.process_name, path_file, self.bypass)
 
