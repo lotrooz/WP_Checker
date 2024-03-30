@@ -104,15 +104,15 @@ class AntiDebugging_Check(object):
         CheckFlags_Value = self.NtQuery_flags
 
         if (CheckFlags_Value == 0x7):
-            Extract.Printer_Check_Logic("NtQueryInformationProcess DebugPort")
+
             event.debug.break_at(pid, self.NtQuery_return_address, self.NtQueryInformationProcess_Check)
 
         elif (CheckFlags_Value == 0x1E):
-            Extract.Printer_Check_Logic("NtQueryInformationProcess ObjectHandle")
+
             event.debug.break_at(pid, self.NtQuery_return_address, self.NtQueryInformationProcess_Check)
 
         elif (CheckFlags_Value == 0x1F):
-            Extract.Printer_Check_Logic("NtQueryInformationProcess Flags")
+
             event.debug.break_at(pid, self.NtQuery_return_address, self.NtQueryInformationProcess_Check)
 
 
