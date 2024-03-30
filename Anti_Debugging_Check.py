@@ -46,7 +46,7 @@ class AntiDebugging_Check(object):
             Extract.Printer_Check("IsDebuggerPresent")
             return True
 
-    def IsDebuggerPresent_Bypass(self, event):
+    def IsDebuggerPresent_Bypass(self, event): # Bypass 인자에선 이미 위에 PEB_BeingDebugged에서 변경하여 이쪽 이벤트 나오진 않음
 
         thread = event.get_thread()
 
