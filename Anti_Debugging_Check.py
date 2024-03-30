@@ -46,10 +46,6 @@ class AntiDebugging_Check(object):
             Extract.Printer_Check("IsDebuggerPresent")
             return True
 
-        else:
-            Extract.Printer_NotCheck("IsDebuggerPresent")
-            return False
-
     def IsDebuggerPresent_Bypass(self, event):
 
         thread = event.get_thread()
@@ -62,8 +58,6 @@ class AntiDebugging_Check(object):
             if Extract.registers(event,"Eax") == 0:
                 Extract.Printer_Bypass("IsDebuggerPresent")
 
-            else:
-                Extract.Printer_NotBypass("IsDebuggerPresent")
 
         else: # 64bit bypass
             thread.set_register("Rax", 0)
@@ -71,8 +65,6 @@ class AntiDebugging_Check(object):
             if Extract.registers(event, "Rax") == 0:
                 Extract.Printer_Bypass("IsDebuggerPresent")
 
-            else:
-                Extract.Printer_NotBypass("IsDebuggerPresent")
 
     def CheckRemoteDebuggerPresent(self, event, second, return_address, bypass):
 

@@ -8,6 +8,15 @@ from Anti_VM import *
 import Extract
 
 
+def validate_args(args):
+    count = sum([args.Anti_Debugging, args.Anti_VM, args.Others])
+
+    if count == 0:
+        raise argparse.ArgumentTypeError("At least one of the options -d (Anti Debugging), -v (Anti VM), -o (Others)")
+
+    elif count > 1:
+        raise argparse.ArgumentTypeError("Only one of the options -d (Anti Debugging), -v (Anti VM), -o (Others)")
+
 def main():
     usage = "usage : WP_Checker.py [options] <filename>"
 
@@ -25,23 +34,23 @@ def main():
 
     args = parser.parse_args()
 
-    anti_event_handler = lambda: Extract.anti_create_event_handler(args.Bypass) # Bypass Mode Check
-
-    anti_vm_event_handler = lambda: Extract.anti_vm_create_event_handler(args.Bypass)  # Bypass Mode Check
+    validate_args(args)
 
     if args.Anti_Debugging:
+        anti_event_handler = lambda: Extract.anti_create_event_handler(args.Bypass)  # Bypass Mode Check
+
         with Debug(anti_event_handler(), bKillOnExit=True) as debug:
             debug.execv(args.filename)
 
             debug.loop()
 
     elif args.Anti_VM:
+        anti_vm_event_handler = lambda: Extract.anti_vm_create_event_handler(args.Bypass)  # Bypass Mode Check
+
         with Debug(anti_vm_event_handler(), bKillOnExit=True) as debug:
             debug.execv(args.filename)
 
             debug.loop()
-
-
 
 if __name__ == '__main__':
     main()

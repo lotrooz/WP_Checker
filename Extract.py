@@ -69,13 +69,6 @@ def Printer_Bypass(Name):
     print ("[+] " + Name + " Bypass !!")
     print ("[+] ----------------------------")
 
-def Printer_NotBypass(Name):
-    print("\n[+] Not Detection !!")
-    print("[+] ----------------------------")
-    print("[+] " + Name + " Not Bypass !!")
-    print("[+] ----------------------------")
-
-
 
 
 class return_value(object):
