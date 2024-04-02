@@ -1,10 +1,12 @@
 from winappdbg import *
 from winappdbg.win32.defines import *
 #from winappdbg.win32.ntdll import *
+#from .util import MemoryAddresses, DebugRegister, classproperty
 
 import time
 import Extract
 import Anti_Debugging_Check
+import struct
 class Anti_Debugging_Start(EventHandler):
 
     apiHooks = {
@@ -30,7 +32,18 @@ class Anti_Debugging_Start(EventHandler):
         self.Anti = Anti_Debugging_Check.AntiDebugging_Check()
 
     def create_process(self, event):
+
         process, pid, tid, module, thread, registers = Extract.get_all(event)
+
+
+        main_crt = module.resolve("mainCRTStartup")
+        print (main_crt)
+
+
+
+        #event.debug.start_tracing(tid)
+
+        print (hex(process.get_entry_point()))
 
         peb_address = process.get_peb_address()
 
@@ -53,7 +66,7 @@ class Anti_Debugging_Start(EventHandler):
             # [+] PEB!NtGlobalFlag_32bit
             NtGlobalFlag = process.read_char(peb_address + 0x68) # PEB!NtGlobalFlag, Fix
 
-            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68, self.bypass)
+            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68)
             # [+] PEB!NtGlobalFlag_32bit Finish
 
             ''' Fix it
@@ -75,12 +88,23 @@ class Anti_Debugging_Start(EventHandler):
 
         else:
             # [+] PEB!NtGlobalFlag_64bit
-            NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag, Fix
+            #NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag, Fix, peb + 0xbc Read Error
 
-            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc, self.bypass)
+            #self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc, self.bypass)
+
             # [+] PEB!NtGlobalFlag_64bit Finish
+            NtGlobalFlag_address = process.malloc(0x1000)
 
-            #time.sleep(10)
+            NtGlobalFlag_assembly_code = b"\x65\x48\x8B\x04\x25\x60\x00\x00\x00" # mov rax, gs:[60h]
+            NtGlobalFlag_assembly_code += b"\x8A\x80\xBC\x00\x00\x00"   # mov al, [rax+BCh]
+            NtGlobalFlag_assembly_code += b"\x24\x70"       # and al, 70h
+            NtGlobalFlag_assembly_code += b"\x3C\x70"  # cmp al, 70h
+            NtGlobalFlag_assembly_code += b"\xC3"
+
+            process.write(NtGlobalFlag_address, NtGlobalFlag_assembly_code)
+
+            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag_address)
+
 
             ''' Fix it
             #process_heap = process.read_qword(peb_address + 0x30)  # PEB!HeapFlag , Fix
@@ -111,11 +135,27 @@ class Anti_Debugging_Start(EventHandler):
     def load_dll(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
 
+
         if module.match_name("ntdll.dll"):
             # Get the process ID.
             peb_address = process.get_peb_address()
 
+            main_crt = module.resolve("mainCRTStartup")
+            winmaincrt = module.resolve("WinMainCRTStartup")
+            ww = module.resolve("wWinMainCRTStartup")
+            db = module.resolve("DbgBreakPoint")
+            ld = module.resolve("LdrpDoDebuggerBreak")
+
+            print (main_crt)
+            print (winmaincrt)
+            print (ww)
+            print (hex(db))
+            print (type(db))
+
+
+
             peb = process.get_peb()
+
 
 
 

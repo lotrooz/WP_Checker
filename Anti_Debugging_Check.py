@@ -21,8 +21,24 @@ class AntiDebugging_Check(object):
 
                 Extract.Printer_Bypass("PEB!BeingDebugged")
 
-    def peb_NtGlobalFlag(self, event, peb_ntglobalflag, ntglobalflag_address, bypass):
+    def peb_NtGlobalFlag(self, event, NtGlobalFlag_address):
 
+        process = event.get_process()
+        thread = event.get_thread()
+        pid = event.get_pid()
+
+        event.debug.break_at(pid, NtGlobalFlag_address + 0x9, self.peb_NtGlobalFlag_Check)
+
+        #process.start_thread(NtGlobalFlag_address)
+
+        thread_handle = win32.CreateRemoteThread(process.get_handle(), 0, 0, NtGlobalFlag_address, 0, 0)
+        #t_id = win32.GetThreadId(thread_handle)
+        #process._del_thread(t_id)
+        #win32.WaitForSingleObject(thread_handle[0])
+        #print (thread_handle[0])
+        #win32.CloseHandle(thread_handle[0])
+
+        '''
         if (peb_ntglobalflag == 0x70): # Check
             process = event.get_process()
 
@@ -32,6 +48,32 @@ class AntiDebugging_Check(object):
                 process.write_char(ntglobalflag_address, 0) # Bypass
 
                 Extract.Printer_Bypass("PEB!NtGlobalFlag")
+        '''
+
+    def peb_NtGlobalFlag_Check(self, event):
+
+        context = event.get_thread().get_context()
+        al_value = context['Rax'] & 0xFF  # Assuming RAX holds the value of the al register
+
+        peb = event.get_process().get_peb_address()
+        tt = context['Rax'] + 0xBC
+        read = event.get_process().read_char(tt)
+        print ("AAAA")
+        print (hex(tt))
+        print (hex(context['Rax']))
+        print (hex(peb))
+        print (read)
+        #print (al_value)
+
+        if read == 0x70:
+            Extract.Printer_Check("PEB!NtGlobalFlag")
+
+            #if Anti_Debugging.Anti_Debugging_Start.bypass: # bypass모드를 넣고 하면 값이 달라짐 ..
+            event.get_process().write_char(tt, 0)
+            print (hex(event.get_process().read_char(tt)))
+            Extract.Printer_Bypass("PEB!NtGlobalFlag")
+
+
 
     # Heap Flag -> Need to check HeapGrowable 
     def peb_HeapFlag(self, event, peb_heapflag, offset):

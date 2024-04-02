@@ -51,6 +51,12 @@ def check_64bit_eip_address(rip, breakpoint_address): # RIP = Current BreakPoint
     else:
         return False
 
+def extract_al(event):
+    # Read the value of the al register
+    context = event.get_thread().get_context()
+    al_value = context['Rax'] & 0xFF  # Assuming RAX holds the value of the al register
+    return al_value
+
 def Printer_Check(Name):
     print ("\n[+] Detection !!")
     print ("[+] ----------------------------")
