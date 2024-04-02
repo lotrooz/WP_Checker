@@ -24,58 +24,40 @@ class AntiDebugging_Check(object):
     def peb_NtGlobalFlag(self, event, NtGlobalFlag_address):
 
         process = event.get_process()
-        thread = event.get_thread()
         pid = event.get_pid()
+        bits = Extract.check_bit(event)
 
-        event.debug.break_at(pid, NtGlobalFlag_address + 0x9, self.peb_NtGlobalFlag_Check)
+        if bits == 32:
+            event.debug.break_at(pid, NtGlobalFlag_address + 0x6, self.peb_NtGlobalFlag_Check)
 
-        #process.start_thread(NtGlobalFlag_address)
+        else:
+            event.debug.break_at(pid, NtGlobalFlag_address + 0x9, self.peb_NtGlobalFlag_Check)
 
-        thread_handle = win32.CreateRemoteThread(process.get_handle(), 0, 0, NtGlobalFlag_address, 0, 0)
-        #t_id = win32.GetThreadId(thread_handle)
-        #process._del_thread(t_id)
-        #win32.WaitForSingleObject(thread_handle[0])
-        #print (thread_handle[0])
-        #win32.CloseHandle(thread_handle[0])
+        win32.CreateRemoteThread(process.get_handle(), 0, 0, NtGlobalFlag_address, 0, 0)
 
-        '''
-        if (peb_ntglobalflag == 0x70): # Check
-            process = event.get_process()
-
-            Extract.Printer_Check("PEB!NtGlobalFlag")
-
-            if (bypass):
-                process.write_char(ntglobalflag_address, 0) # Bypass
-
-                Extract.Printer_Bypass("PEB!NtGlobalFlag")
-        '''
 
     def peb_NtGlobalFlag_Check(self, event):
 
         context = event.get_thread().get_context()
-        al_value = context['Rax'] & 0xFF  # Assuming RAX holds the value of the al register
+        bits = Extract.check_bit(event)
 
-        peb = event.get_process().get_peb_address()
-        tt = context['Rax'] + 0xBC
-        read = event.get_process().read_char(tt)
-        print ("AAAA")
-        print (hex(tt))
-        print (hex(context['Rax']))
-        print (hex(peb))
-        print (read)
-        #print (al_value)
+        if bits == 32:
+            check_ntglobal = context['Eax'] + 0x68
+            read_ntglobal = event.get_process().read_char(check_ntglobal)
 
-        if read == 0x70:
+        else:
+            check_ntglobal = context['Rax'] + 0xBC
+            read_ntglobal = event.get_process().read_char(check_ntglobal)
+
+        if read_ntglobal == 0x70:
             Extract.Printer_Check("PEB!NtGlobalFlag")
 
-            #if Anti_Debugging.Anti_Debugging_Start.bypass: # bypass모드를 넣고 하면 값이 달라짐 ..
-            event.get_process().write_char(tt, 0)
-            print (hex(event.get_process().read_char(tt)))
+            event.get_process().write_char(check_ntglobal, 0)
             Extract.Printer_Bypass("PEB!NtGlobalFlag")
 
 
 
-    # Heap Flag -> Need to check HeapGrowable 
+    # Heap Flag -> Need to check HeapGrowable
     def peb_HeapFlag(self, event, peb_heapflag, offset):
         process = event.get_process()
 
@@ -359,4 +341,3 @@ class AntiDebugging_Check(object):
                 if isinstance(e, WindowsError):
                     if e.winerror == 6: # Invalid Handle
                         Extract.Printer_Check("LdrLoadDll")
-

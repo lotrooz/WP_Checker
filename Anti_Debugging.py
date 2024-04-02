@@ -63,10 +63,22 @@ class Anti_Debugging_Start(EventHandler):
         Major_Version = win32.GetVersionExA().dwMajorVersion # Windows Version
 
         if bits == 32:
-            # [+] PEB!NtGlobalFlag_32bit
-            NtGlobalFlag = process.read_char(peb_address + 0x68) # PEB!NtGlobalFlag, Fix
+            # NtGlobalFlag = process.read_char(peb_address + 0x68) # PEB!NtGlobalFlag, peb + 0x68 Read Error
 
-            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68)
+            # self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0x68)
+
+            # [+] PEB!NtGlobalFlag_32bit
+            NtGlobalFlag_address = process.malloc(0x1000)
+
+            NtGlobalFlag_assembly_code = b"\x64\xA1\x30\x00\x00\x00"  # mov eax, fs:[30h]
+            NtGlobalFlag_assembly_code += b"\x8A\x40\x68"  # mov al, [eax+68h]
+            NtGlobalFlag_assembly_code += b"\x24\x70"  # and al, 70h
+            NtGlobalFlag_assembly_code += b"\xC3"  # ret
+
+            process.write(NtGlobalFlag_address, NtGlobalFlag_assembly_code)
+
+            self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag_address)
+
             # [+] PEB!NtGlobalFlag_32bit Finish
 
             ''' Fix it
@@ -87,24 +99,31 @@ class Anti_Debugging_Start(EventHandler):
             '''
 
         else:
+            # NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag, Fix, peb + 0xbc Read Error
+
+            # self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc)
+
             # [+] PEB!NtGlobalFlag_64bit
-            #NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag, Fix, peb + 0xbc Read Error
-
-            #self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag, peb_address + 0xbc, self.bypass)
-
-            # [+] PEB!NtGlobalFlag_64bit Finish
             NtGlobalFlag_address = process.malloc(0x1000)
 
-            NtGlobalFlag_assembly_code = b"\x65\x48\x8B\x04\x25\x60\x00\x00\x00" # mov rax, gs:[60h]
-            NtGlobalFlag_assembly_code += b"\x8A\x80\xBC\x00\x00\x00"   # mov al, [rax+BCh]
-            NtGlobalFlag_assembly_code += b"\x24\x70"       # and al, 70h
-            NtGlobalFlag_assembly_code += b"\x3C\x70"  # cmp al, 70h
-            NtGlobalFlag_assembly_code += b"\xC3"
+            NtGlobalFlag_assembly_code = b"\x65\x48\x8B\x04\x25\x60\x00\x00\x00"  # mov rax, gs:[60h]
+            NtGlobalFlag_assembly_code += b"\x8A\x80\xBC\x00\x00\x00"  # mov al, [rax+BCh]
+            NtGlobalFlag_assembly_code += b"\x24\x70"  # and al, 70h
+            NtGlobalFlag_assembly_code += b"\xC3"  # ret
 
             process.write(NtGlobalFlag_address, NtGlobalFlag_assembly_code)
 
             self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag_address)
 
+            # [+] PEB!HeapFlag_64bit
+
+            HeapFlags_address = process.malloc(0x1000)
+
+            HeapFlags_assembly_code = b"\x65\x48\x8B\x04\x25\x60\x00\x00\x00"  # mov rax, gs:[60h]
+            HeapFlags_assembly_code += b"\x48\x8b\x40\x30" # mov rax, qword_ptr[rax+0x30] , process heap
+            HeapFlags_assembly_code += b"\x48\x83\xc0\x14" # add rax, 0x14
+
+            if (Major_Version < 6):
 
             ''' Fix it
             #process_heap = process.read_qword(peb_address + 0x30)  # PEB!HeapFlag , Fix
@@ -139,20 +158,6 @@ class Anti_Debugging_Start(EventHandler):
         if module.match_name("ntdll.dll"):
             # Get the process ID.
             peb_address = process.get_peb_address()
-
-            main_crt = module.resolve("mainCRTStartup")
-            winmaincrt = module.resolve("WinMainCRTStartup")
-            ww = module.resolve("wWinMainCRTStartup")
-            db = module.resolve("DbgBreakPoint")
-            ld = module.resolve("LdrpDoDebuggerBreak")
-
-            print (main_crt)
-            print (winmaincrt)
-            print (ww)
-            print (hex(db))
-            print (type(db))
-
-
 
             peb = process.get_peb()
 
@@ -226,6 +231,3 @@ class Anti_Debugging_Start(EventHandler):
         #print (process.read_string(module_file, 0x20)) # ???
 
         self.Anti.LdrLoadDll_Check(event, self.process_name, path_file, self.bypass)
-
-
-
