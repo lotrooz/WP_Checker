@@ -36,15 +36,6 @@ class Anti_Debugging_Start(EventHandler):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
 
 
-        main_crt = module.resolve("mainCRTStartup")
-        print (main_crt)
-
-
-
-        #event.debug.start_tracing(tid)
-
-        print (hex(process.get_entry_point()))
-
         peb_address = process.get_peb_address()
 
         peb = process.get_peb()
@@ -81,22 +72,19 @@ class Anti_Debugging_Start(EventHandler):
 
             # [+] PEB!NtGlobalFlag_32bit Finish
 
-            ''' Fix it
-            process_heap = process.read_dword(peb_address + 0x18)  # PEB!HeapFlag
+            # [+] PEB!HeapFlag_32bit
 
-            if (Major_Version < 6):
-                heap_flag_offset = 0xC
-                heap_force_offset = 0x10
+            HeapFlags_address = process.malloc(0x1000)
 
-            else:
-                heap_flag_offset = 0x40
-                heap_force_offset = 0x44
+            HeapFlags_assembly_code = b"\x64\xA1\x30\x00\x00\x00"  # mov eax, fs:[30h]
+            HeapFlags_assembly_code += b"\x8b\x80\x18\x00\x00\x00"  # mov eax, dword_ptr [eax+0x18] , eax = process heap
+            HeapFlags_assembly_code += b"\xc3" # ret
 
-            heap_flag = process.read_dword(process_heap + heap_flag_offset)
-            heap_force = process.read_dword(process_heap + heap_force_offset)
+            process.write(HeapFlags_address, HeapFlags_assembly_code)
 
-            self.Anti.peb_HeapFlag(event, heap_flag, heap_force)  # heap flag & heap base
-            '''
+            self.Anti.peb_HeapFlag(self, HeapFlags_address, Major_Version)
+
+            # [+] PEB!HeapFlag_32bit Finish
 
         else:
             # NtGlobalFlag = process.read_dword(peb_address + 0xbc) # PEB!NtGlobalFlag, Fix, peb + 0xbc Read Error
@@ -114,42 +102,21 @@ class Anti_Debugging_Start(EventHandler):
             process.write(NtGlobalFlag_address, NtGlobalFlag_assembly_code)
 
             self.Anti.peb_NtGlobalFlag(event, NtGlobalFlag_address)
+            # [+] PEB!NtGlobalFlag_64bit Finish
 
             # [+] PEB!HeapFlag_64bit
 
             HeapFlags_address = process.malloc(0x1000)
 
             HeapFlags_assembly_code = b"\x65\x48\x8B\x04\x25\x60\x00\x00\x00"  # mov rax, gs:[60h]
-            HeapFlags_assembly_code += b"\x48\x8b\x40\x30" # mov rax, qword_ptr[rax+0x30] , process heap
-            HeapFlags_assembly_code += b"\x48\x83\xc0\x14" # add rax, 0x14
+            HeapFlags_assembly_code += b"\x48\x8b\x40\x30" # mov rax, qword_ptr[rax+0x30] , rax = process heap
+            HeapFlags_assembly_code += b"\xC3"  # ret
 
-            if (Major_Version < 6):
+            process.write(HeapFlags_address, HeapFlags_assembly_code)
 
-            ''' Fix it
-            #process_heap = process.read_qword(peb_address + 0x30)  # PEB!HeapFlag , Fix
+            self.Anti.peb_HeapFlag(event, HeapFlags_address, Major_Version)
 
-            if (Major_Version < 6):
-                heap_flag_offset = 0x14
-                heap_force_offset = 0x18
-
-            else:
-                heap_flag_offset = 0x70
-                heap_force_offset = 0x74
-
-
-            #print (heap_flag_offset)
-            #print (hex(peb_address))
-            #print (hex(peb_address+0x30))
-            #print (hex(process_heap))
-
-
-
-            #heap_flag = process.read_dword(process_heap + heap_flag_offset)
-            #heap_force = process.read_dword(process_heap + heap_force_offset)
-
-            #self.Anti.peb_HeapFlag(event, heap_flag, heap_force)  # heap flag & heap base
-            '''
-
+            # [+] PEB!HeapFlag_64bit Finish
 
     def load_dll(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)

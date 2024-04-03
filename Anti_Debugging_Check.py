@@ -58,11 +58,57 @@ class AntiDebugging_Check(object):
 
 
     # Heap Flag -> Need to check HeapGrowable
-    def peb_HeapFlag(self, event, peb_heapflag, offset):
+    def peb_HeapFlag(self, event, HeapFlag_address, Major_Version):
         process = event.get_process()
+        pid = event.get_pid()
+        bits = Extract.check_bit(event)
+        self.version_check = Major_Version
 
+        if bits == 32:
+            event.debug.break_at(pid, HeapFlag_address + 0xC, self.peb_HeapFlag_Check)
 
+        else:
+            event.debug.break_at(pid, HeapFlag_address + 0xD, self.peb_HeapFlag_Check)
 
+        win32.CreateRemoteThread(process.get_handle(), 0, 0, HeapFlag_address, 0, 0)
+
+    def peb_HeapFlag_Check(self, event):
+        context = event.get_thread().get_context()
+        bits = Extract.check_bit(event)
+
+        if bits == 32: # 32 bit Version
+            if (self.version_check < 6): # Before Vista
+                check_heap_flag = context['Eax'] + 0xC
+                check_heap_force = context['Eax'] + 0x10
+                read_heap_flag = event.get_process().read_dword(check_heap_flag)
+                read_heap_force = event.get_process().read_dword(check_heap_force)
+
+            else:
+                check_heap_flag = context['Eax'] + 0x40
+                check_heap_force = context['Eax'] + 0x44
+                read_heap_flag = event.get_process().read_dword(check_heap_flag)
+                read_heap_force = event.get_process().read_dword(check_heap_force)
+
+        else: # 64 bit Version
+            if (self.version_check < 6): # Before Vista
+                check_heap_flag = context['Rax'] + 0x14
+                check_heap_force = context['Rax'] + 0x18
+                read_heap_flag = event.get_process().read_dword(check_heap_flag)
+                read_heap_force = event.get_process().read_dword(check_heap_force)
+
+            else:
+                check_heap_flag = context['Rax'] + 0x70
+                check_heap_force = context['Rax'] + 0x74
+                read_heap_flag = event.get_process().read_dword(check_heap_flag)
+                read_heap_force = event.get_process().read_dword(check_heap_force)
+
+        if (read_heap_flag != 2 or read_heap_force != 0):
+            Extract.Printer_Check("PEB!HeapFlag")
+
+            event.get_process().write_dword(check_heap_flag, 0x2) # bypass
+            event.get_process().write_dword(check_heap_force, 0x0)
+
+            Extract.Printer_Bypass("PEB!HeapFlag")
 
     def IsDebuggerPresent(self, event, return_value):
 
