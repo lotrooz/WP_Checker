@@ -6,7 +6,7 @@ Python Module : Winappdbg
 |------|---|---|
 |PEB!BeingDebugged|OK|OK|
 |PEB!NtGlobalFlag|OK|OK|
-|PEB!HeapFlag|Fix|Fix|
+|PEB!HeapFlag|OK|OK|
 |IsDebuggerPresent|OK|OK|
 |CheckRemoteDebuggerProcess|OK|OK|
 |NtQueryInformationProcess_DebugPort|OK|OK|
