@@ -4,8 +4,9 @@ from winappdbg.win32.defines import *
 
 import time
 import Extract
-import Anti_Debugging_Check
 import Anti_VM_Check
+import Anti_Debugging_Check
+
 
 class Anti_VM_Start(EventHandler):
     apiHooks = {
@@ -30,7 +31,7 @@ class Anti_VM_Start(EventHandler):
         super(Anti_VM_Start, self).__init__()
         self.bypass = param1    # Bypass Mode Value
 
-        self.Anti_VM = Anti_VM_Check.AntiVM_Check()
+        self.AntiVM = Anti_VM_Check.AntiVM_Check()
 
     def create_process(self, event):
         process, pid, tid, module, thread, registers = Extract.get_all(event)
@@ -60,13 +61,13 @@ class Anti_VM_Start(EventHandler):
 
         return_address = Extract.check_csp(event, bits)
 
-        self.AntiVM.DeviceIoControl_Data(event, dwIoControlCode, lpOutBuffer, return_address, self.bypass)
+        self.AntiVM.DeviceIoControl(event, dwIoControlCode, lpOutBuffer, return_address, self.bypass)
 
     def pre_FindFirstFileW(self, event, ra, lpfilename, lpFindFileData):
         self.AntiVM.FindFirstFileW_Check(event, lpfilename, self.bypass)
 
     def pre_RegOpenKeyExW(self, event, ra, hkey, lpsubkey, uloptions, samdesired, phkResult):
-        self.AntiVM.RegOpenKeyExW_Check_Bypass(event, hkey, lpsubkey, self.bypass)
+        self.AntiVM.RegOpenKeyExW_Check(event, hkey, lpsubkey, self.bypass)
 
     def pre_SetupDiGetDeviceRegistryPropertyW(self, event, ra, de_info_set, de_info_data, pro, pro_reg, pro_buf,
                                               pro_size, requ_size):
