@@ -35,7 +35,6 @@ class Anti_Debugging_Start(EventHandler):
 
         process, pid, tid, module, thread, registers = Extract.get_all(event)
 
-
         peb_address = process.get_peb_address()
 
         peb = process.get_peb()
@@ -82,7 +81,7 @@ class Anti_Debugging_Start(EventHandler):
 
             process.write(HeapFlags_address, HeapFlags_assembly_code)
 
-            self.Anti.peb_HeapFlag(self, HeapFlags_address, Major_Version)
+            self.Anti.peb_HeapFlag(event, HeapFlags_address, Major_Version)
 
             # [+] PEB!HeapFlag_32bit Finish
 
@@ -127,11 +126,6 @@ class Anti_Debugging_Start(EventHandler):
             peb_address = process.get_peb_address()
 
             peb = process.get_peb()
-
-
-
-
-
 
     # [+] IsDebuggerPresent
     def post_IsDebuggerPresent(self, event, retval):  # IsDebuggerPresent
