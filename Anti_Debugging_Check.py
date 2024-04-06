@@ -266,11 +266,11 @@ class AntiDebugging_Check(object):
 
             if bypass:
                 if bits == 32:
-                    check_value = registers['Esp'] + 0x4 # Bypass
+                    check_value = registers['Esp'] + 0x8 # Bypass
                     process.write_dword(check_value, 0)
 
                 else:
-                    thread.set_register('Rdx', 0) # Bypass Check.. Rcx ??
+                    thread.set_register('Rdx', 0) # Bypass Check
 
                 Extract.Printer_Bypass("NtSetInformationThread")
 
