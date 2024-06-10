@@ -294,16 +294,18 @@ class AntiDebugging_Check(object):
         check_system_info = self.NtSystem_info
 
         DebuggerEnabled = process.read_char(check_system_info)    # al , Debugging -> 1
-        DebuggerNotPresent = process.read_char(check_system_info + 0x1)   #ah , Debugging -> 0
+        #DebuggerNotPresent = process.read_char(check_system_info + 0x1)   #ah , Debugging -> 0
 
-        if (DebuggerEnabled or not DebuggerNotPresent):
+        if DebuggerEnabled:
             Extract.Printer_Check("NtQuerySystemInformation")
 
-            if self.NtSystem_bypass:    # bypass
-                process.write_char(check_system_info, 0) # DebuggerEnabled -> 0
-                process.write_char(check_system_info, 1) # DebuggerNotPresent -> 1
+            if self.NtSystem_bypass:  # bypass
+                process.write_char(check_system_info, 0)  # DebuggerEnabled -> 0
+                #process.write_char(check_system_info, 1)  # DebuggerNotPresent -> 1
 
                 Extract.Printer_Bypass("NtQuerySystemInformation")
+        #if (DebuggerEnabled or not DebuggerNotPresent):
+
 
     def NtClose_Check(self, event, handle, bypass):
 
