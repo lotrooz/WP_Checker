@@ -14,8 +14,8 @@ Python Module : Winappdbg
 |NtQueryInformationProcess_Flags|OK|OK|
 |NtSetInformationThread|OK|OK|
 |NtQuerySystemInformation|OK|OK|
-|NtOpenProcess|OK|OK|
-|NtClose|OK|OK|
-|ldrloadlibrary|OK|X|
+|NtOpenProcess|Code O, Test|Code O, Test|
+|NtClose|Code O, Test|Code O, Test|
+|ldrloadlibrary|Code O, Test|X|
 
 
