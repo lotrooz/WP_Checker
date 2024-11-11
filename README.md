@@ -1,4 +1,4 @@
-Anti Debugging, Anti VM Check & Bypass
+Anti Debugging Check & Bypass, Anti VM ing
 
 Python Module : Winappdbg
 
